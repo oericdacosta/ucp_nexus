@@ -175,14 +175,27 @@ Ensure your target UCP server is running and accessible (e.g., `http://localhost
 
 ### 2. Deploy the Hub (Docker)
 
-Build the image:
+1. **Build the image**:
 
-```bash
-cd ucp_hub_mcp
-docker build -t ucp-hub-mcp .
-```
+   ```bash
+   cd ucp_hub_mcp
+   docker build -t ucp-hub-mcp .
+   ```
+
+2. **Run with Configuration**:
+   The Hub requires your local configuration to be mounted.
+
+   ```bash
+   docker run -i --rm \
+     --network host \
+     --env-file .env \
+     -v $(pwd)/config.yaml:/app/config.yaml \
+     ucp-hub-mcp
+   ```
 
 ### 3. Configure Claude Desktop
+
+To use the Dockerized Hub with Claude, you need to point the configuration to your absolute paths.
 
 Edit your configuration file:
 
@@ -201,6 +214,8 @@ Add the server:
         "-i",
         "--rm",
         "--network", "host",
+        "--env-file", "/absolute/path/to/ucp_hub_mcp/.env",
+        "-v", "/absolute/path/to/ucp_hub_mcp/config.yaml:/app/config.yaml",
         "ucp-hub-mcp"
       ]
     }
@@ -211,7 +226,7 @@ Add the server:
 ### 4. Interactive Verify
 
 Open Claude and ask:
-> "Access the local UCP network at <http://localhost:8182>. Discover the available services and place an order for a bouquet of red roses using code."
+> "Access the UCP network configured in my environment. Discover the available services and list them."
 
 ---
 
@@ -219,19 +234,54 @@ Open Claude and ask:
 
 If you want to extend the Hub functionality:
 
+### 1. Configuration
+
+The Hub uses a hybrid configuration system:
+
+- **`config.yaml`**: Defines structural behavior (Sandbox whitelist, Endpoint mappings).
+- **`.env`**: Defines infrastructure settings (Port, Host, Secrets).
+
+**Example `.env`:**
+
+```bash
+UCP_PORT=10101
+UCP_LOG_LEVEL=INFO
+```
+
+**Example `config.yaml`:**
+
+```yaml
+endpoint_map:
+  dev.ucp.shopping.checkout: "/checkout-sessions"
+sandbox_globals:
+  - "math"
+  - "json"
+```
+
+### 2. Setup & Run
+
 1. **Install uv**:
 
    ```bash
    pip install uv
    ```
 
-2. **Install Dependencies**:
+2. **Configure Environment**:
+   Copy the example environment file and adjust as needed:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   *Edit `.env` to set your desired port (default: 10101) or log level.*
+
+3. **Install Dependencies**:
 
    ```bash
    uv sync
    ```
 
-3. **Run Locally (No Docker)**:
+4. **Run Locally**:
 
    ```bash
    uv run src/ucp_hub_mcp/server.py
