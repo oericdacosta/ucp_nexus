@@ -5,12 +5,13 @@ from .client import UCPClient
 from .exceptions import UCPError
 from rich.console import Console
 from rich import print_json
+from .config import settings
 
 app = typer.Typer(help="UCP to MCP Hub - Orchestrator CLI")
 console = Console()
 
 @app.command()
-def discover(url: str = typer.Option(..., help="The URL of the UCP Server to discover", prompt="UCP Server URL")):
+def discover(url: str = typer.Option(settings.ucp_server_url, help="The URL of the UCP Server to discover", prompt=False if settings.ucp_server_url else "UCP Server URL")):
     """
     Performs dynamic discovery against a UCP Server.
     """

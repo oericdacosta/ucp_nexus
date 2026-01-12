@@ -6,6 +6,7 @@ from typing import Dict, Any
 
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
+from .config import settings
 
 class KeyManager:
     """
@@ -68,7 +69,8 @@ class AP2Security:
             "iss": "ucp-hub-mcp",
             "sub": "agent-autonomous-action",
             "aud": beneficiary,
-            "exp": int(time.time()) + 300, # 5 minutes expiration
+            "exp": int(time.time()) + settings.jwt_expiry_seconds,
+
             "scope": "ucp:payment",
             "mandate": {
                 "max_amount": amount,

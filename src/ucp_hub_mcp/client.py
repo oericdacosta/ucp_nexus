@@ -5,10 +5,15 @@ from ucp_sdk.models.discovery.profile_schema import UcpDiscoveryProfile
 from .exceptions import UCPDiscoveryError, UCPConformanceError
 
 
+from .config import settings
+
+
 class UCPClient:
     """Client for interacting with UCP Servers."""
 
-    def __init__(self, timeout: float = 10.0, agent_profile: str = "default-hub-profile"):
+    def __init__(self, timeout: float = None, agent_profile: str = "default-hub-profile"):
+        if timeout is None:
+            timeout = settings.http_timeout
         self.headers = {"UCP-Agent": f"profile={agent_profile}"}
         self.client = httpx.Client(timeout=timeout, headers=self.headers)
 
@@ -26,8 +31,7 @@ class UCPClient:
             UCPDiscoveryError: If the server cannot be reached or returns an error.
             UCPConformanceError: If the server response does not match UCP specs.
         """
-        # Ensure URL doesn't end with slash to avoid double slashes if we were appending path,
-        # but here we are hitting a specific endpoint.
+        # Strip trailing slash to ensure clean path concatenation for the specific discovery endpoint.
         base_url = url.rstrip("/")
         discovery_url = f"{base_url}/.well-known/ucp"
 
