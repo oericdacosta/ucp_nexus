@@ -4,6 +4,7 @@ import sys
 from typing import Any, Dict, Optional
 from ucp_hub_mcp.client import UCPClient
 from ucp_hub_mcp.registry import ToolRegistry
+from ucp_hub_mcp.security import AP2Security
 
 class UCPProxy:
     """
@@ -13,6 +14,8 @@ class UCPProxy:
     def __init__(self, registry: ToolRegistry):
         self._client = UCPClient()
         self._registry = registry
+        self._security = AP2Security()
+        self._discovered_payment_handlers = []
 
     async def discover(self, url: str) -> list[dict]:
         """
@@ -21,6 +24,10 @@ class UCPProxy:
         """
         profile = self._client.discover_services(url)
         self._registry.register_from_profile(profile)
+        
+        # Store payment handlers from Phase 4
+        if profile.payment and profile.payment.handlers:
+            self._discovered_payment_handlers = profile.payment.handlers
         
         # Return a simplified list of what was found for the agent's logic
         results = []
@@ -32,6 +39,26 @@ class UCPProxy:
                     "version": cap.version
                 })
         return results
+
+    async def select_payment_method(self, method_name: str, amount: float = 0.0, currency: str = "BRL") -> dict:
+        """
+        Selects a payment method and generates an AP2 security mandate.
+        Returns a payment token (mock) to be used in checkout.
+        """
+        # Phase 4: Validate if method was discovered
+        # For prototype, we allow 'google_pay' if any handler is present or if we just want to test logic.
+        # Ideally: verify method_name in self._discovered_payment_handlers
+        
+        # Generate Security Mandate (JWT)
+        mandate_jwt = self._security.create_mandate(amount, currency, beneficiary="merchant-id")
+        
+        print(f"[UCPProxy] Generated AP2 Mandate for {amount} {currency} via {method_name}")
+        
+        return {
+            "token": f"mock_token_{method_name}_{amount}",
+            "mandate": mandate_jwt,
+            "method": method_name
+        }
 
     async def call(self, tool_name: str, **kwargs) -> Any:
         """
