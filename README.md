@@ -167,8 +167,11 @@ print(f"Checkout created with ID: {checkout['id']}")
 
 ### 1. UCP Merchant Server
 
-Ensure you have a UCP-compliant merchant server running and accessible.
-The Hub connects to any UCP endpoint (e.g., `http://localhost:8182`, `https://api.my-store.com`).
+You need a running UCP-compliant server to interact with. The Hub is fully agnostic and adapts to any domain (e.g., Retail, Services, Digital Goods).
+
+**Connection Requirements:**
+Ensure your target UCP server is running and accessible (e.g., `http://localhost:8182` or a public URL).
+*Note: The Hub acts as a proxy. If your UCP server is not correctly initialized or returns errors (e.g., 500 Internal Error), the Hub will faithfully report those errors to the agent.*
 
 ### 2. Deploy the Hub (Docker)
 
