@@ -1,0 +1,15 @@
+# UCP Nexus Hub Configuration
+
+# Mappings between Capability Names and REST Endpoints
+endpoint_map:
+  # Example: Mapping a standard checkout capability to its API route
+  # dev.ucp.shopping.checkout: "/checkout-sessions"
+  # my.custom.domain.tool: "/api/v1/resource"
+
+# Whitelisted Global Modules for the Sandbox
+sandbox_globals:
+  - "math"
+  - "datetime"
+  - "json"
+  - "random"
+  - "uuid"
