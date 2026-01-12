@@ -22,7 +22,7 @@ async def search_tools(regex: str) -> list[dict]:
     return await search_tool.execute({"regex": regex})
 
 @mcp.tool()
-async def refresh_ucp_discovery(url: str = "http://localhost:8182") -> str:
+async def refresh_ucp_discovery(url: str) -> str:
     """
     Triggers a fresh discovery against the UCP Merchant URL.
     This populates the internal registry with deferred tools.
@@ -47,6 +47,9 @@ async def execute_python(code: str) -> str:
 
 def main():
     """Entry point for the MCP Server."""
+    # FastMCP handles transport selection via CLI args, but we can set defaults or direct execution here if needed.
+    # For now, we rely on the standard mcp.run() which auto-detects SSE/Stdio.
+    # To enforce env vars, one would typically use them in the deployment command or here.
     mcp.run()
 
 if __name__ == "__main__":

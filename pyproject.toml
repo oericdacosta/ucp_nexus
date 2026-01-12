@@ -11,6 +11,8 @@ dependencies = [
     "typer>=0.21.1",
     "ucp-sdk",
     "cryptography",
+    "pydantic-settings>=2.12.0",
+    "pyyaml>=6.0.3",
 ]
 
 [tool.uv.sources]

@@ -2,7 +2,8 @@
 from typing import Any
 from ucp_hub_mcp.client import UCPClient
 from ucp_hub_mcp.registry import ToolRegistry
-from ucp_hub_mcp.security import AP2Security
+from ucp_hub_mcp.security import AP2Security, KeyManager
+from .config import settings
 
 class UCPProxy:
     """
@@ -13,8 +14,9 @@ class UCPProxy:
         self._client = UCPClient()
         self._registry = registry
         self._security = AP2Security()
+        self._key_manager = KeyManager()
         self._discovered_payment_handlers = []
-        self._last_discovery_url = "http://localhost:8182"  # Default fallback
+        self._last_discovery_url = settings.ucp_server_url
 
     async def discover(self, url: str) -> list[dict]:
         """
@@ -45,32 +47,45 @@ class UCPProxy:
         Selects a payment method and generates an AP2 security mandate.
         Returns a payment token to be used in checkout.
         """
+        import uuid
+        
         # Generate Security Mandate (JWT)
         mandate_jwt = self._security.create_mandate(amount, currency, beneficiary="merchant-id")
         
         print(f"[UCPProxy] Generated AP2 Mandate for {amount} {currency} via {method_name}")
         
         return {
-            "token": f"mock_token_{method_name}_{amount}",
+            "token": f"pay_{uuid.uuid4().hex[:24]}", # Unique Payment Provider Token
             "mandate": mandate_jwt,
             "method": method_name
         }
 
     def _resolve_endpoint(self, tool_name: str) -> str:
         """Resolves the UCP endpoint path for a given tool name."""
-        # Maps capability names to their REST endpoints as per the UCP Registry spec.
-        endpoint_map = {
-            "dev.ucp.shopping.checkout": "/checkout-sessions"
-        }
-        return endpoint_map.get(tool_name)
+        return settings.endpoint_map.get(tool_name)
 
-    def _get_conformance_headers(self) -> dict:
-        """Generates standard UCP Conformance headers."""
+    def _get_conformance_headers(self, payload_str: str = "") -> dict:
+        """Generates standard UCP Conformance headers with Ed25519 signature."""
         import uuid
+        import time
+        
+        # Security Headers
+        request_id = str(uuid.uuid4())
+        idempotency_key = str(uuid.uuid4())
+        timestamp = str(int(time.time()))
+        nonce = uuid.uuid4().hex[:16]
+        
+        # Signing Input: Timestamp + Nonce + Payload (prevent replay & tampering)
+        signing_input = f"{timestamp}.{nonce}.{payload_str}"
+        signature = self._key_manager.sign(signing_input)
+        
         return {
-            "request-id": str(uuid.uuid4()),
-            "idempotency-key": str(uuid.uuid4()),
-            "request-signature": "sig_ed25519_..." # Real implementation would sign the payload here
+            "request-id": request_id,
+            "idempotency-key": idempotency_key,
+            "ucp-timestamp": timestamp,
+            "ucp-nonce": nonce,
+            "request-signature": signature,
+            "ucp-key-id": self._key_manager.key_id
         }
 
     async def call(self, tool_name: str, **kwargs) -> Any:
@@ -79,11 +94,12 @@ class UCPProxy:
         Orchestrates resolution, headers, and request dispatch.
         """
         print(f"[UCPProxy] Calling tool: {tool_name}")
-        
+        if not self._last_discovery_url:
+            raise RuntimeError("You must call 'await ucp.discover(url)' before calling capabilities.")
+
         endpoint_path = self._resolve_endpoint(tool_name)
         if not endpoint_path:
-             print(f"[UCPProxy] Warning: No endpoint mapping for {tool_name}. Using mock.")
-             return {"status": "executed", "tool": tool_name, "mock": True}
+             raise ValueError(f"Tool '{tool_name}' is not currently mapped to a supported endpoint.")
 
         base_url = self._last_discovery_url
         full_url = f"{base_url}{endpoint_path}"
@@ -93,27 +109,38 @@ class UCPProxy:
 
     def _dispatch_request(self, url: str, kwargs: dict) -> dict:
         """Handles the HTTP request logic based on the operation type."""
+        import json
+        
         checkout_id = kwargs.get("id")
         action = kwargs.pop("_action", None)
         client = self._client.client
-        headers = self._get_conformance_headers()
+        
+        # Prepare payload and headers
+        payload = kwargs
+        if action == "complete":
+             payload = kwargs.get("payment", kwargs)
+        
+        # Canonical serialization for signing
+        # sort_keys=True ensures deterministic hashing/signing
+        payload_str = json.dumps(payload, sort_keys=True)
+        headers = self._get_conformance_headers(payload_str)
 
         try:
             if not checkout_id:
                 # CREATE
                 print(f"[UCPProxy] Transport: POST {url}")
-                resp = client.post(url, json=kwargs, headers=headers)
+                # We use content=payload_str to ensure byte-level match with signature
+                resp = client.post(url, content=payload_str, headers=headers)
             elif action == "complete":
                 # COMPLETE
                 complete_url = f"{url}/{checkout_id}/complete"
                 print(f"[UCPProxy] Transport: POST {complete_url}")
-                payload = kwargs.get("payment", kwargs) # Use payment object if present
-                resp = client.post(complete_url, json=payload, headers=headers)
+                resp = client.post(complete_url, content=payload_str, headers=headers)
             else:
                 # UPDATE
                 update_url = f"{url}/{checkout_id}"
                 print(f"[UCPProxy] Transport: PUT {update_url}")
-                resp = client.put(update_url, json=kwargs, headers=headers)
+                resp = client.put(update_url, content=payload_str, headers=headers)
             
             resp.raise_for_status()
             return {"result": resp.json()}
@@ -143,7 +170,7 @@ class Sandbox:
 
     def _build_safe_globals(self, additional_globals: dict = None) -> dict:
         """Constructs the restricted global environment."""
-        import json
+        import importlib
         
         base_globals = {
             "ucp": self.proxy,
@@ -162,10 +189,17 @@ class Sandbox:
                 "float": float,
                 "bool": bool,
                 "next": next,
-                "json": json,
             }
         }
         
+        # Dynamic import of allowed modules from config
+        for module_name in settings.sandbox_globals:
+             try:
+                 mod = importlib.import_module(module_name)
+                 base_globals[module_name] = mod
+             except ImportError:
+                 print(f"Warning: Configured sandbox module '{module_name}' could not be imported.")
+
         if additional_globals:
             # Securely merge allowed globals.
             # We explicitly prevent overriding __builtins__ via the top-level dictionary
