@@ -8,8 +8,9 @@ from .exceptions import UCPDiscoveryError, UCPConformanceError
 class UCPClient:
     """Client for interacting with UCP Servers."""
 
-    def __init__(self, timeout: float = 10.0):
-        self.client = httpx.Client(timeout=timeout)
+    def __init__(self, timeout: float = 10.0, agent_profile: str = "default-hub-profile"):
+        self.headers = {"UCP-Agent": f"profile={agent_profile}"}
+        self.client = httpx.Client(timeout=timeout, headers=self.headers)
 
     def discover_services(self, url: str) -> UcpDiscoveryProfile:
         """
