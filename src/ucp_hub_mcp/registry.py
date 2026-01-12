@@ -1,6 +1,5 @@
 
 from typing import Dict, List, Optional
-import pydantic
 from ucp_sdk.models.discovery.profile_schema import UcpDiscoveryProfile
 from ucp_sdk.models._internal import Discovery
 
@@ -36,10 +35,8 @@ class ToolRegistry:
         
         for name, cap in self._deferred_tools.items():
             if pattern.search(name):
-                # In a real implementation, we would return the full JSON Schema here.
+                # We return the tool definition.
                 # Since 'cap' is a Pydantic model (Capabilities), we dump it to dict.
-                # Note: The actual MCP Tool definition requires 'name', 'description', 'input_schema'.
-                # We need to map UCP Capability -> MCP Tool.
                 
                 tool_def = {
                     "name": cap.name,

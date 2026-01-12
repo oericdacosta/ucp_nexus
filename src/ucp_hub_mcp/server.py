@@ -1,8 +1,5 @@
 
-import asyncio
-import sys
 from mcp.server.fastmcp import FastMCP
-from mcp.types import Tool
 from ucp_hub_mcp.client import UCPClient
 from ucp_hub_mcp.registry import ToolRegistry
 from ucp_hub_mcp.tools.search import ToolSearchTool

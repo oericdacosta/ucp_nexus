@@ -9,11 +9,10 @@ from cryptography.hazmat.primitives import serialization
 
 class KeyManager:
     """
-    Manages cryptographic keys for the Hub using real Ed25519 implementation.
-    Reference: RFC 8032
+    Manages cryptographic keys for the Hub using Ed25519 (RFC 8032).
     """
     def __init__(self):
-        # Generate a real Ed25519 private key
+        # Generate Ed25519 private key
         self._private_key = ed25519.Ed25519PrivateKey.generate()
         self._public_key = self._private_key.public_key()
         
