@@ -22,6 +22,10 @@ RUN uv sync --frozen --no-install-project --no-dev
 # Copy the rest of the application
 COPY . .
 
+# Ensure config.yaml is available at a known path
+COPY config.yaml /app/config.yaml
+ENV UCP_CONFIG_PATH=/app/config.yaml
+
 # Install the project itself
 RUN uv sync --frozen --no-dev
 
