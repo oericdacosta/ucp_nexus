@@ -4,4 +4,12 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "httpx>=0.28.1",
+    "pydantic>=2.12.5",
+    "typer>=0.21.1",
+    "ucp-sdk",
+]
+
+[tool.uv.sources]
+ucp-sdk = { git = "https://github.com/Universal-Commerce-Protocol/python-sdk.git" }
