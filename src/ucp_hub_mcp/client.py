@@ -41,12 +41,7 @@ class UCPClient:
             # Validate against the official SDK model
             payload = response.json()
             model = UcpDiscoveryProfile(**payload)
-            
-            # Additional Conformance Checks (Phase 1 Requirement)
-            # "Mapeamento de Autoridade: O Hub deve validar o Namespace Governance"
-            # Example check: Ensure capabilities obey domain rules if strictly required.
-            # For now, we trust the Pydantic validation for structure.
-            
+
             return model
 
         except ValidationError as e:

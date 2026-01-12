@@ -1,5 +1,5 @@
 
-from typing import Any
+
 from mcp.types import Tool
 from ..sandbox import Sandbox
 from ..registry import ToolRegistry
