@@ -144,7 +144,7 @@ The script runs in a restricted scope with the following available:
 
 ```python
 # 1. Inspect the merchant (Replace URL with your target)
-services = await ucp.discover("http://localhost:8182")
+services = await ucp.discover("http://your-ucp-server-url:port")
 
 # 2. Create a checkout session using the discovered 'dev.ucp.shopping.checkout' tool
 checkout = await ucp.call(
@@ -245,6 +245,8 @@ The Hub uses a hybrid configuration system:
 
 ```bash
 UCP_PORT=10101
+UCP_UCP_SERVER_URL=http://your-ucp-server-url:port
+UCP_JWT_EXPIRY_SECONDS=300
 UCP_LOG_LEVEL=INFO
 ```
 

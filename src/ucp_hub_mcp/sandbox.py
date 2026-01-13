@@ -143,7 +143,8 @@ class UCPProxy:
                 resp = client.put(update_url, content=payload_str, headers=headers)
             
             resp.raise_for_status()
-            return {"result": resp.json()}
+            resp.raise_for_status()
+            return resp.json()
 
         except Exception as e:
             self._handle_http_error(e)
